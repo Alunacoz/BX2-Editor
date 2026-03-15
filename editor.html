@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BounceX Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="editor.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- ── Toolbar ──────────────────────────────────────── -->
+      <header class="toolbar">
+        <div class="toolbar-brand">
+          <span class="brand-bx">BX</span>
+          <span class="brand-editor">EDITOR</span>
+        </div>
+
+        <div class="toolbar-file">
+          <button class="btn btn-ghost" id="btnLoadVideo">
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              width="13"
+              height="13"
+            >
+              <rect x="2" y="3" width="12" height="10" rx="1" />
+              <polygon
+                points="6,6 11,8.5 6,11"
+                fill="currentColor"
+                stroke="none"
+              />
+            </svg>
+            Load Video
+          </button>
+          <button class="btn btn-ghost" id="btnLoadBx">
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              width="13"
+              height="13"
+            >
+              <path d="M3 2h7l3 3v9H3z" />
+              <polyline points="10,2 10,5 13,5" />
+            </svg>
+            Open path…
+          </button>
+          <div class="toolbar-sep"></div>
+          <button
+            class="btn btn-ghost btn-undo"
+            id="btnUndo"
+            title="Undo (Ctrl+Z)"
+            disabled
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="13"
+              height="13"
+            >
+              <path d="M3 8 A5 5 0 1 1 8 13" />
+              <polyline points="3,5 3,9 7,9" />
+            </svg>
+          </button>
+          <button
+            class="btn btn-ghost btn-undo"
+            id="btnRedo"
+            title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+            disabled
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="13"
+              height="13"
+            >
+              <path d="M13 8 A5 5 0 1 0 8 13" />
+              <polyline points="13,5 13,9 9,9" />
+            </svg>
+          </button>
+          <div class="toolbar-sep"></div>
+          <button class="btn btn-accent" id="btnExport" disabled>
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              width="13"
+              height="13"
+            >
+              <path d="M8 2v8m-3-3 3 3 3-3" />
+              <path d="M3 12h10" />
+            </svg>
+            <span class="export-label">Export .bx</span>
+          </button>
+          <div class="toolbar-sep"></div>
+          <button
+            class="btn btn-record"
+            id="btnRecord"
+            title="Record mode — play video and use ← ↑ → to stamp markers (R)"
+          >
+            <span class="rec-dot"></span>
+            <span class="rec-label">Record</span>
+          </button>
+        </div>
+
+        <div class="toolbar-transport">
+          <button class="transport-btn" id="btnRewind" title="Rewind to start">
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="14"
+              height="14"
+            >
+              <polyline points="12,3 6,8 12,13" />
+              <line x1="4" y1="3" x2="4" y2="13" />
+            </svg>
+          </button>
+          <button
+            class="transport-btn transport-play"
+            id="btnPlay"
+            title="Play / Pause (Space)"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              width="14"
+              height="14"
+              id="playIcon"
+            >
+              <polygon points="3,2 13,8 3,14" />
+            </svg>
+          </button>
+          <div class="transport-time">
+            <span class="time-current" id="timeCurrentDisplay">
+              00:00:00:00
+            </span>
+            <span class="time-sep">/</span>
+            <span class="time-duration" id="timeDurationDisplay">
+              00:00:00:00
+            </span>
+          </div>
+          <div class="frame-badge">
+            F
+            <span id="frameDisplay">0</span>
+          </div>
+          <div class="volume-control">
+            <button class="transport-btn" id="btnMute" title="Mute / Unmute">
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                width="14"
+                height="14"
+                id="volIcon"
+              >
+                <polygon points="2,5 6,5 10,2 10,14 6,11 2,11" />
+                <path d="M12,5.5 a3,3 0 0 1 0,5" id="volWave1" />
+                <path d="M13.5,3.5 a5.5,5.5 0 0 1 0,9" id="volWave2" />
+              </svg>
+            </button>
+            <input
+              type="range"
+              class="volume-slider"
+              id="volumeSlider"
+              min="0"
+              max="1"
+              step="0.02"
+              value="1"
+              title="Volume"
+            />
+          </div>
+        </div>
+
+        <div class="toolbar-hints">
+          <span class="hint-key">R</span>
+          <span class="hint-label">record</span>
+          <span class="hint-key">M</span>
+          <span class="hint-label">add</span>
+          <span class="hint-key">Del</span>
+          <span class="hint-label">delete</span>
+          <span class="hint-key">[ ]</span>
+          <span class="hint-label">prev/next</span>
+          <span class="hint-key">←→</span>
+          <span class="hint-label">step frame</span>
+          <span class="hint-key">⌘Z</span>
+          <span class="hint-label">undo</span>
+        </div>
+      </header>
+
+      <!-- ── Record mode indicator bar ────────────────────────── -->
+      <div class="rec-indicator" id="recIndicator" style="display: none">
+        <span class="rec-indicator-dot"></span>
+        RECORDING — ← 0.0 &nbsp;·&nbsp; ↑ 0.5 &nbsp;·&nbsp; → 1.0 &nbsp;·&nbsp;
+        <kbd>Esc</kbd>
+        or
+        <kbd>R</kbd>
+        to stop
+      </div>
+
+      <!-- ── Workspace ────────────────────────────────────── -->
+      <div class="workspace" id="workspace">
+        <!-- Viewer: video + preview -->
+        <div class="viewer-panel">
+          <div class="video-wrap" id="videoWrap">
+            <div class="video-placeholder" id="videoPlaceholder">
+              <div class="placeholder-icon">
+                <svg
+                  viewBox="0 0 48 48"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  width="48"
+                  height="48"
+                  opacity="0.3"
+                >
+                  <rect x="4" y="8" width="40" height="32" rx="3" />
+                  <polygon
+                    points="18,16 32,24 18,32"
+                    fill="currentColor"
+                    stroke="none"
+                    opacity="0.5"
+                  />
+                </svg>
+              </div>
+              <p class="placeholder-title">No video loaded</p>
+              <p class="placeholder-sub">
+                Click
+                <strong>Load Video</strong>
+                or drop a video file here
+              </p>
+            </div>
+            <video id="mainVideo" preload="metadata"></video>
+          </div>
+          <div class="preview-wrap" id="previewWrap">
+            <div class="preview-label">PATH PREVIEW</div>
+            <canvas id="previewCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Props: marker properties + marker list -->
+        <aside class="props-panel" id="propsPanel">
+          <div
+            class="props-resize-handle"
+            id="propsResizeHandle"
+            title="Drag to resize panel"
+          ></div>
+
+          <!-- Tab strip -->
+          <div class="props-tabs">
+            <button class="props-tab active" id="tabMarker">PATH</button>
+            <button class="props-tab" id="tabEffect">EFFECTS</button>
+          </div>
+
+          <!-- ── PATH tab ── -->
+          <div
+            id="propsTabMarker"
+            style="
+              display: flex;
+              flex-direction: column;
+              flex: 1;
+              min-height: 0;
+              overflow: hidden;
+            "
+          >
+            <!-- Properties form -->
+            <div class="props-section">
+              <div class="panel-header">
+                <span class="panel-title" id="propsPanelTitle">NEW MARKER</span>
+                <span class="selection-label" id="selectionLabel">
+                  Defaults
+                </span>
+              </div>
+
+              <div class="props-empty" id="propsEmpty" style="display: none">
+                Select a marker to edit
+              </div>
+
+              <div class="props-form" id="propsForm">
+                <div class="prop-row" id="propFrameRow" style="display: none">
+                  <label class="prop-label">Frame</label>
+                  <input
+                    type="number"
+                    class="prop-input"
+                    id="propFrame"
+                    min="0"
+                    step="1"
+                    placeholder="—"
+                    title="Scroll to adjust · Shift+Scroll = ±10"
+                  />
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">Depth</label>
+                  <div class="prop-depth-row">
+                    <input
+                      type="range"
+                      class="prop-slider"
+                      id="propDepthSlider"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value="0.5"
+                    />
+                    <input
+                      type="text"
+                      inputmode="decimal"
+                      class="prop-input prop-num"
+                      id="propDepth"
+                      placeholder="—"
+                    />
+                  </div>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">Transition</label>
+                  <select class="prop-select" id="propTrans">
+                    <option value="0">Linear</option>
+                    <option value="1">Sine</option>
+                    <option value="2">Quint</option>
+                    <option value="3">Quart</option>
+                    <option value="4">Quad</option>
+                    <option value="5">Expo</option>
+                    <option value="6">Elastic</option>
+                    <option value="7">Cubic</option>
+                    <option value="8">Circ</option>
+                    <option value="9">Bounce</option>
+                    <option value="10">Back</option>
+                    <option value="11">Spring</option>
+                  </select>
+                </div>
+                <div class="prop-row">
+                  <label class="prop-label">Ease</label>
+                  <select class="prop-select" id="propEase">
+                    <option value="0">In</option>
+                    <option value="1">Out</option>
+                    <option value="2">In-Out</option>
+                    <option value="3">Out-In</option>
+                  </select>
+                </div>
+                <div
+                  class="prop-row prop-row-actions"
+                  id="propDeleteRow"
+                  style="display: none"
+                >
+                  <button class="btn btn-danger-sm" id="btnDeleteSelected">
+                    Delete Selected
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-divider"></div>
+
+            <!-- Marker list -->
+            <div class="markers-section">
+              <div class="panel-header">
+                <span class="panel-title">MARKERS</span>
+                <span class="marker-count-badge" id="markerCountBadge">0</span>
+                <button
+                  class="btn-icon-add"
+                  id="btnAddMarker"
+                  title="Add marker at current frame (M)"
+                >
+                  <svg
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    width="10"
+                    height="10"
+                  >
+                    <line x1="6" y1="1" x2="6" y2="11" />
+                    <line x1="1" y1="6" x2="11" y2="6" />
+                  </svg>
+                </button>
+              </div>
+              <div class="marker-list" id="markerList">
+                <div class="markers-empty">
+                  No markers yet.
+                  <br />
+                  Press
+                  <strong>M</strong>
+                  to add one at the playhead.
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- /propsTabMarker -->
+
+          <!-- ── EFFECTS tab ── -->
+          <div
+            id="propsTabEffect"
+            style="
+              display: none;
+              flex-direction: column;
+              flex: 1;
+              min-height: 0;
+              overflow: hidden;
+            "
+          >
+            <div class="panel-header">
+              <span class="panel-title">EFFECT</span>
+              <span class="selection-label" id="fxSelLabel">No selection</span>
+            </div>
+            <div class="fx-props-empty" id="fxPropsEmpty">
+              Double-click the Effects timeline
+              <br />
+              to add an effect, or click one
+              <br />
+              to select and edit it.
+            </div>
+            <div
+              class="props-form fx-props-form"
+              id="fxPropsForm"
+              style="display: none; overflow-y: auto; flex: 1"
+            ></div>
+          </div>
+          <!-- /propsTabEffect -->
+        </aside>
+      </div>
+
+      <!-- ── Timeline resize handle ───────────────────────── -->
+      <!-- ── Effects resize handle ────────────────────────────────── -->
+      <div
+        class="timeline-resizer"
+        id="fxResizeHandle"
+        title="Drag to resize effects timeline"
+        style="display: none"
+        data-fx-handle
+      ></div>
+
+      <!-- ── Effects Timeline (hidden by default, stacks above marker timeline) ── -->
+      <div class="fx-section" id="fxSection" style="display: none">
+        <div class="fx-toolbar">
+          <span class="fx-section-label">EFFECTS</span>
+          <div class="tl-help">
+            Double-click empty row = add effect · Drag = move · Drag edge =
+            resize · Del = delete
+          </div>
+        </div>
+        <canvas id="fxCanvas"></canvas>
+      </div>
+
+      <div
+        class="timeline-resizer"
+        id="timelineResizer"
+        title="Drag to resize timeline"
+      ></div>
+
+      <!-- ── Timeline ─────────────────────────────────────── -->
+      <div class="timeline-section" id="timelineSection">
+        <div class="timeline-toolbar">
+          <div class="zoom-group">
+            <button class="btn-tl-zoom" id="btnZoomOut" title="Zoom out">
+              −
+            </button>
+            <span class="zoom-label" id="zoomLabel">1.0×</span>
+            <button class="btn-tl-zoom" id="btnZoomIn" title="Zoom in">
+              +
+            </button>
+            <button class="btn-tl-fit" id="btnZoomFit">Fit</button>
+          </div>
+          <div class="tl-help">
+            Wheel = scroll · Ctrl+Wheel = zoom · Click = seek · Click marker =
+            select · Shift+Click = range · Ctrl+Click = toggle
+          </div>
+          <div style="flex: 1"></div>
+          <button
+            class="btn-toggle-fx"
+            id="btnToggleFx"
+            title="Toggle effects timeline"
+          >
+            ▸ EFFECTS
+          </button>
+        </div>
+        <div class="timeline-scroll-container" id="timelineScrollContainer">
+          <canvas id="timelineCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- ── Effect search popup ──────────────────────────── -->
+      <div class="fx-search-popup" id="fxSearchPopup" style="display: none">
+        <input
+          type="text"
+          class="fx-search-input"
+          id="fxSearchInput"
+          placeholder="Search effects…"
+          autocomplete="off"
+        />
+        <div class="fx-search-results" id="fxSearchResults"></div>
+      </div>
+    </div>
+    <!-- /.app -->
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="fileInputVideo" accept="video/*" hidden />
+    <input type="file" id="fileInputBx" accept=".bx,.bx2,.json" hidden />
+    <input
+      type="file"
+      id="fileInputFont"
+      accept=".ttf,.otf,.woff,.woff2"
+      hidden
+    />
+
+    <script src="editor.js"></script>
+  </body>
+</html>

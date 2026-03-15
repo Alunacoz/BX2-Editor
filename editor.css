@@ -1,0 +1,1196 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Variables ────────────────────────────────────────────────── */
+:root {
+  --bg: #0c0c0e;
+  --surface: #121214;
+  --surface2: #1a1a1d;
+  --surface3: #222226;
+  --border: #28282e;
+  --border2: #333339;
+  --accent: #e8a020;
+  --accent-dim: rgba(232, 160, 32, 0.15);
+  --accent2: #3dd6c8;
+  --danger: #e05050;
+  --danger-dim: rgba(224, 80, 80, 0.12);
+  --text: #dddde8;
+  --text2: #8888a0;
+  --text3: #444454;
+  --mono: 'JetBrains Mono', 'Consolas', monospace;
+  --ui: 'Rajdhani', 'Segoe UI', sans-serif;
+  --radius: 4px;
+  --tl-h: 188px;
+}
+
+/* ── Reset ────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+body {
+  font-family: var(--ui);
+  font-size: 14px;
+  line-height: 1.4;
+}
+button {
+  cursor: pointer;
+  font-family: var(--ui);
+}
+input,
+select {
+  font-family: var(--mono);
+  color: var(--text);
+  background: var(--surface2);
+}
+input:focus,
+select:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* ── App layout ───────────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 46px;
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.toolbar-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+.brand-bx {
+  font-family: var(--ui);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.brand-editor {
+  font-family: var(--ui);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+}
+
+.toolbar-file {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border2);
+  margin: 0 4px;
+}
+
+.toolbar-transport {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.transport-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--surface3);
+  color: var(--text2);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.transport-btn:hover {
+  background: var(--border2);
+  color: var(--text);
+}
+.transport-play {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  color: #000;
+}
+.transport-play:hover {
+  background: #f0b030;
+}
+
+.transport-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 0 8px;
+}
+.time-current {
+  color: var(--text);
+}
+.time-sep {
+  color: var(--text3);
+}
+.time-duration {
+  color: var(--text3);
+}
+
+.frame-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--surface3);
+  padding: 3px 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.frame-badge span {
+  color: var(--text2);
+}
+
+/* ── Volume control ───────────────────────────────────────────── */
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 72px;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  border: none;
+}
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--text2);
+  cursor: pointer;
+  border: 2px solid var(--surface);
+  transition: background 0.1s;
+}
+.volume-slider::-webkit-slider-thumb:hover {
+  background: var(--text);
+}
+.volume-slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--text2);
+  border: 2px solid var(--surface);
+  cursor: pointer;
+}
+
+.toolbar-hints {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+.hint-key {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.hint-label {
+  font-size: 11px;
+  color: var(--text3);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+}
+.btn-ghost:hover {
+  background: var(--surface3);
+  color: var(--text);
+  border-color: var(--border2);
+}
+.btn-undo:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.btn-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 700;
+}
+.btn-accent:hover {
+  background: #f0b030;
+  border-color: #f0b030;
+}
+.btn-accent:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-record {
+  background: transparent;
+  border-color: var(--border2);
+  color: var(--text2);
+  gap: 6px;
+}
+.btn-record:hover {
+  background: rgba(224, 80, 80, 0.1);
+  border-color: #e05050;
+  color: #e05050;
+}
+.btn-record.record-active {
+  background: rgba(224, 80, 80, 0.15);
+  border-color: #e05050;
+  color: #e05050;
+  animation: rec-pulse-border 1.2s ease-in-out infinite;
+}
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e05050;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.1s;
+}
+.btn-record.record-active .rec-dot {
+  opacity: 1;
+  animation: rec-pulse-dot 1.2s ease-in-out infinite;
+}
+@keyframes rec-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes rec-pulse-border {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 80, 80, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(224, 80, 80, 0.18);
+  }
+}
+
+/* ── Record indicator bar ─────────────────────────────────────── */
+.rec-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 14px;
+  background: rgba(224, 80, 80, 0.1);
+  border-bottom: 1px solid rgba(224, 80, 80, 0.25);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #e07070;
+  flex-shrink: 0;
+}
+.rec-indicator kbd {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: rgba(224, 80, 80, 0.15);
+  border: 1px solid rgba(224, 80, 80, 0.3);
+  border-radius: 3px;
+  padding: 0 4px;
+  color: #e09090;
+}
+.rec-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e05050;
+  flex-shrink: 0;
+  animation: rec-pulse-dot 1s ease-in-out infinite;
+}
+
+.btn-danger-sm {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--danger-dim);
+  color: var(--danger);
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  transition: background 0.12s;
+}
+.btn-danger-sm:hover {
+  background: rgba(224, 80, 80, 0.25);
+}
+
+.btn-icon-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text2);
+  transition:
+    background 0.12s,
+    color 0.12s;
+  flex-shrink: 0;
+}
+.btn-icon-add:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Workspace ────────────────────────────────────────────────── */
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Viewer Panel ─────────────────────────────────────────────── */
+.viewer-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+
+.video-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #050506;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  pointer-events: none;
+}
+.placeholder-icon {
+  display: flex;
+}
+.placeholder-title {
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text3);
+}
+.placeholder-sub {
+  font-size: 13px;
+  color: var(--text3);
+}
+.placeholder-sub strong {
+  color: var(--text2);
+}
+
+#mainVideo {
+  display: none;
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.preview-wrap {
+  height: 96px;
+  flex-shrink: 0;
+  position: relative;
+  border-top: 1px solid var(--border);
+  background: #0a0b0f;
+}
+.preview-label {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  pointer-events: none;
+  z-index: 1;
+}
+#previewCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Props Panel ──────────────────────────────────────────────── */
+.props-panel {
+  display: flex;
+  flex-direction: column;
+  /* width is set by JS via PROPS_W_DEFAULT — change that constant to adjust */
+  flex-shrink: 0;
+  min-width: 200px;
+  max-width: 600px;
+  min-height: 0;
+  background: var(--surface);
+  overflow: hidden;
+  position: relative;
+}
+
+.props-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+}
+.props-resize-handle:hover,
+.props-resize-handle.dragging {
+  background: rgba(232, 160, 32, 0.2);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  flex: 1;
+}
+.selection-label {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--mono);
+}
+.marker-count-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  padding: 0px 6px;
+  border-radius: 10px;
+  color: var(--text2);
+  min-width: 24px;
+  text-align: center;
+}
+
+.panel-divider {
+  height: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Properties Section ───────────────────────────────────────── */
+.props-section {
+  flex-shrink: 0;
+}
+
+.props-empty {
+  padding: 20px 12px;
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.props-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 6px 0;
+}
+
+.prop-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  min-height: 30px;
+}
+.prop-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.prop-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  width: 72px;
+  flex-shrink: 0;
+}
+.prop-input {
+  flex: 1;
+  height: 26px;
+  padding: 0 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text);
+}
+.prop-input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.prop-num {
+  width: 64px;
+  flex: 0 0 64px;
+  padding-right: 10px;
+}
+.prop-depth-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.prop-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  border: none;
+}
+.prop-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--surface);
+}
+.prop-slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  cursor: pointer;
+}
+.prop-select {
+  flex: 1;
+  height: 26px;
+  padding: 0 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+}
+.prop-select option {
+  background: var(--surface2);
+}
+
+.prop-row-actions {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* ── Markers Section ──────────────────────────────────────────── */
+.markers-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.marker-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.marker-list::-webkit-scrollbar {
+  width: 4px;
+}
+.marker-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.marker-list::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 2px;
+}
+
+.markers-empty {
+  padding: 24px 12px;
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+  line-height: 1.8;
+}
+.markers-empty strong {
+  color: var(--text2);
+}
+
+.marker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 8px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.08s;
+  min-height: 30px;
+  user-select: none;
+}
+.marker-row:hover {
+  background: var(--surface2);
+}
+.marker-row.selected {
+  background: var(--accent-dim);
+  border-left-color: var(--accent);
+}
+.marker-row.nearest {
+  border-left-color: var(--accent2);
+}
+
+.marker-row-sel {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+.marker-row-sel.active {
+  background: var(--accent);
+}
+
+.marker-row-frame {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  width: 42px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.marker-row.selected .marker-row-frame {
+  color: var(--accent);
+}
+
+.marker-row-depth-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--surface3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.marker-row-depth-fill {
+  height: 100%;
+  background: var(--accent);
+  opacity: 0.5;
+  border-radius: 2px;
+  transition: width 0.1s;
+}
+.marker-row.selected .marker-row-depth-fill {
+  opacity: 1;
+}
+
+.marker-row-depth-val {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  width: 30px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.marker-row.selected .marker-row-depth-val {
+  color: var(--text2);
+}
+
+.marker-row-ease {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  width: 56px;
+  flex-shrink: 0;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Timeline resize handle ───────────────────────────────────── */
+.timeline-resizer {
+  height: 6px;
+  flex-shrink: 0;
+  background: transparent;
+  border-top: 1px solid var(--border);
+  cursor: ns-resize;
+  position: relative;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.timeline-resizer:hover,
+.timeline-resizer.dragging {
+  background: rgba(232, 160, 32, 0.12);
+  border-top-color: var(--accent);
+}
+.timeline-resizer::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border2);
+  transition:
+    background 0.15s,
+    width 0.15s;
+}
+.timeline-resizer:hover::after,
+.timeline-resizer.dragging::after {
+  background: var(--accent);
+  width: 48px;
+}
+
+/* ── Timeline ─────────────────────────────────────────────────── */
+.timeline-section {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  /* height is set dynamically via JS */
+  min-height: 80px;
+  max-height: 60vh;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.timeline-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 32px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.zoom-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.btn-tl-zoom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+.btn-tl-zoom:hover {
+  background: var(--surface3);
+  color: var(--text);
+}
+.zoom-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  width: 38px;
+  text-align: center;
+}
+.btn-tl-fit {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 12px;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+.btn-tl-fit:hover {
+  background: var(--surface3);
+  color: var(--text);
+}
+
+.tl-help {
+  font-size: 11px;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-scroll-container {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  position: relative;
+}
+#timelineCanvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* ── Drop highlight ───────────────────────────────────────────── */
+body.dragging-over::after {
+  content: 'Drop video or .bx file';
+  position: fixed;
+  inset: 0;
+  background: rgba(232, 160, 32, 0.08);
+  border: 2px dashed var(--accent);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ui);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* ── Scrollbar global ─────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 3px;
+}
+
+/* ── Props panel tabs ─────────────────────────────────────────── */
+.props-tabs {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.props-tab {
+  flex: 1;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+.props-tab:hover {
+  color: var(--text2);
+}
+.props-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Effects section ──────────────────────────────────────────── */
+.fx-section {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 60px;
+  max-height: 50vh;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+.fx-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.fx-section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--accent2);
+  flex-shrink: 0;
+}
+#fxCanvas {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* ── Effects toggle button ────────────────────────────────────── */
+.btn-toggle-fx {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+  flex-shrink: 0;
+}
+.btn-toggle-fx:hover {
+  color: var(--text2);
+  border-color: var(--border2);
+  background: var(--surface2);
+}
+.btn-toggle-fx.active {
+  color: var(--accent2);
+  border-color: var(--accent2);
+  background: rgba(61, 214, 200, 0.08);
+}
+
+/* ── Effect search popup ──────────────────────────────────────── */
+.fx-search-popup {
+  position: fixed;
+  z-index: 9999;
+  width: 230px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.fx-search-input {
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface3);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+}
+.fx-search-input:focus {
+  outline: none;
+  background: var(--surface2);
+}
+.fx-search-results {
+  padding: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.fx-search-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+.fx-search-item:hover {
+  background: var(--surface3);
+}
+.fx-search-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.fx-search-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.fx-search-label {
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+.fx-search-desc {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+.fx-search-empty {
+  padding: 12px 8px;
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+}
+
+/* ── Effects props ────────────────────────────────────────────── */
+.fx-props-empty {
+  padding: 20px 12px;
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+  line-height: 1.8;
+}
+.fx-props-form {
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Color picker row ─────────────────────────────────────────── */
+.prop-color {
+  width: 30px;
+  height: 22px;
+  padding: 1px 2px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.prop-color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.prop-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+.prop-color-hex {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Textarea prop ────────────────────────────────────────────── */
+.prop-textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  padding: 4px 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.prop-textarea:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
