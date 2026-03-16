@@ -96,7 +96,7 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /r "IPv4.*[0-9][0-9]*\.[
 :: ── 6. Launch ───────────────────────────────────────────────────────────────
 echo.
 echo   On your local network, open this URL on any device:
-echo   Editor  -^>  http://%LOCAL_IP%:%HTTP_PORT%/editor.html
+echo   Editor  -^>  http://%LOCAL_IP%:%HTTP_PORT%
 echo.
 echo   Press Ctrl+C to stop.
 echo.

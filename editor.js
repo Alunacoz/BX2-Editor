@@ -291,6 +291,7 @@ const fxDrag = {
   startX: 0,
   origStart: 0,
   origEnd: 0,
+  passedNeighbours: new Map(), // id → 'right' | 'left' (direction we passed through)
 }
 
 // Effects timeline hover
@@ -790,9 +791,15 @@ async function exportBx2() {
       if (err.name === 'AbortError') return
     }
   }
-  // Fallback download
+  // Fallback download — prompt for filename since there's no native save dialog
+  const suggested = prompt('Save as:', 'path.bx')
+  if (suggested === null) return   // user cancelled
+  const filename = suggested.trim() || 'path.bx'
   const url = URL.createObjectURL(blob)
-  const a = Object.assign(document.createElement('a'), { href: url, download: 'path.bx' })
+  const a = Object.assign(document.createElement('a'), {
+    href: url,
+    download: filename.endsWith('.bx') ? filename : filename + '.bx',
+  })
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -1488,18 +1495,25 @@ function renderPreview() {
   const { pathRgb, ballRgb } = getEffectiveColors(curFrame)
   const pcStr = `${pathRgb[0]},${pathRgb[1]},${pathRgb[2]}`
 
-  // Boundary lines
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1
+  // Compute current depth first so boundary lines can react to it
+  const dA = curFrame >= 0 && state.path[curFrame] >= 0 ? state.path[curFrame] : 0
+  const dB = state.path[Math.min(curFrame+1, state.totalFrames-1)] >= 0 ? state.path[Math.min(curFrame+1, state.totalFrames-1)] : dA
+  const curDepth = dA + (dB-dA)*frac
+  const ballY = bottomY + curDepth * (topY - bottomY)
+
+  const isNearTop    = curDepth >= 0.99
+  const isNearBottom = curDepth <= 0.01
+
+  // Boundary lines — light up accent colour when ball is at the extreme
+  ctx.lineWidth = 1
+  ctx.strokeStyle = isNearTop    ? '#3dd6c8' : 'rgba(255,255,255,0.15)'
   ctx.beginPath(); ctx.moveTo(0, topY);    ctx.lineTo(W, topY);    ctx.stroke()
+  ctx.strokeStyle = isNearBottom ? '#f07849' : 'rgba(255,255,255,0.15)'
   ctx.beginPath(); ctx.moveTo(0, bottomY); ctx.lineTo(W, bottomY); ctx.stroke()
 
   ctx.save()
   ctx.beginPath(); ctx.rect(0, EDGE_PAD, W, H - EDGE_PAD*2); ctx.clip()
 
-  const dA = curFrame >= 0 && state.path[curFrame] >= 0 ? state.path[curFrame] : 0
-  const dB = state.path[Math.min(curFrame+1, state.totalFrames-1)] >= 0 ? state.path[Math.min(curFrame+1, state.totalFrames-1)] : dA
-  const curDepth = dA + (dB-dA)*frac
-  const ballY = bottomY + curDepth * (topY - bottomY)
   const framesVisible = Math.ceil(W / PPF_PREV) + 2
 
   // ── Per-frame speed integration ────────────────────────────────────────────
@@ -2513,6 +2527,7 @@ function onFxMouseDown(e) {
     fxDrag.active=true; fxDrag.effectId=hit.effectId
     fxDrag.mode = hit.zone==='start' ? 'resizeStart' : hit.zone==='end' ? 'resizeEnd' : 'move'
     fxDrag.startX=x; fxDrag.origStart=ef.startFrame; fxDrag.origEnd=ef.endFrame; fxDrag.origLayer=ef.layer??0
+    fxDrag.passedNeighbours = new Map()
     document.body.style.cursor = hit.zone==='body' ? 'grabbing' : 'ew-resize'
     document.body.style.userSelect = 'none'
   } else {
@@ -2535,16 +2550,29 @@ function onFxMouseMove(e) {
     if (!ef) return
     const fd = Math.round((x - fxDrag.startX) / pixelsPerFrame())
     const maxF = Math.max(state.totalFrames-1, 0)
+
     if (fxDrag.mode === 'move') {
       const dur = fxDrag.origEnd - fxDrag.origStart
-      ef.startFrame = Math.max(0, Math.min(maxF-dur, fxDrag.origStart+fd))
-      ef.endFrame   = ef.startFrame + dur
       const newLayer = Math.max(0, Math.floor((y - FX_RULER_H) / FX_TRACK_H))
+      let s = Math.max(0, Math.min(maxF - dur, fxDrag.origStart + fd))
+      let end = s + dur
+      // Collide: push away from any neighbour on the same layer
+      s = fxCollideMove(ef.id, newLayer, s, end)
+      ef.startFrame = s
+      ef.endFrame   = s + dur
       ef.layer = newLayer
+
     } else if (fxDrag.mode === 'resizeStart') {
-      ef.startFrame = Math.max(0, Math.min(fxDrag.origEnd-1, fxDrag.origStart+fd))
+      let s = Math.max(0, Math.min(fxDrag.origEnd - 1, fxDrag.origStart + fd))
+      // Collide left edge: can't push past a neighbour to the left
+      s = fxCollideResizeStart(ef.id, ef.layer ?? 0, s, ef.endFrame)
+      ef.startFrame = s
+
     } else {
-      ef.endFrame = Math.max(fxDrag.origStart+1, Math.min(maxF, fxDrag.origEnd+fd))
+      let end = Math.max(fxDrag.origStart + 1, Math.min(maxF, fxDrag.origEnd + fd))
+      // Collide right edge: can't push past a neighbour to the right
+      end = fxCollideResizeEnd(ef.id, ef.layer ?? 0, ef.startFrame, end)
+      ef.endFrame = end
     }
     return
   }
@@ -2558,6 +2586,96 @@ function onFxMouseMove(e) {
   fxHoverEffectId = hit ? hit.effectId : null
   fxHoverZone     = hit ? hit.zone     : null
   fxCanvas.style.cursor = !hit ? 'crosshair' : hit.zone==='body' ? 'grab' : 'ew-resize'
+}
+
+// ── Effect collision helpers ──────────────────────────────────────────────────
+
+/** Neighbours on a given layer, excluding the dragged effect itself. */
+function fxNeighbours(excludeId, layer) {
+  return state.effects
+    .filter(e => e.id !== excludeId && (e.layer ?? 0) === layer)
+    .sort((a, b) => a.startFrame - b.startFrame)
+}
+
+/**
+ * Resolve a full-block move so it doesn't overlap any neighbour.
+ * If the desired position overlaps something, push the block to the nearest
+ * free gap — preferring the direction of travel (left or right).
+ */
+function fxCollideMove(id, layer, desiredStart, desiredEnd) {
+  const dur = desiredEnd - desiredStart
+  const neighbours = fxNeighbours(id, layer)
+  if (neighbours.length === 0) return desiredStart
+
+  // Compare to the effect's *current* position, not origStart, so direction
+  // is correct even after passing through a neighbour and coming back.
+  const ef = state.effects.find(e => e.id === id)
+  const movingRight = desiredStart >= (ef ? ef.startFrame : fxDrag.origStart)
+
+  // Update passedNeighbours: detect when block has fully cleared a neighbour
+  for (const n of neighbours) {
+    const alreadyPassed = fxDrag.passedNeighbours.has(n.id)
+    if (!alreadyPassed) {
+      if (n.startFrame >= fxDrag.origEnd && desiredStart >= n.endFrame) {
+        fxDrag.passedNeighbours.set(n.id, 'right')
+      }
+      if (n.endFrame <= fxDrag.origStart && desiredEnd <= n.startFrame) {
+        fxDrag.passedNeighbours.set(n.id, 'left')
+      }
+    } else {
+      const dir = fxDrag.passedNeighbours.get(n.id)
+      if (dir === 'right' && desiredStart < n.startFrame) {
+        fxDrag.passedNeighbours.delete(n.id)
+      }
+      if (dir === 'left' && desiredEnd > n.endFrame) {
+        fxDrag.passedNeighbours.delete(n.id)
+      }
+    }
+  }
+
+  if (movingRight) {
+    let barrier = Infinity
+    for (const n of neighbours) {
+      const passed = fxDrag.passedNeighbours.get(n.id)
+      const isBarrier =
+        (!passed && n.startFrame >= fxDrag.origEnd && desiredStart < n.endFrame) ||
+        (passed === 'left' && desiredStart < n.startFrame)
+      if (isBarrier && n.startFrame < barrier) barrier = n.startFrame
+    }
+    return barrier === Infinity ? desiredStart : Math.min(desiredStart, barrier - dur)
+  } else {
+    let barrier = -Infinity
+    for (const n of neighbours) {
+      const passed = fxDrag.passedNeighbours.get(n.id)
+      const isBarrier =
+        (!passed && n.endFrame <= fxDrag.origStart && desiredEnd > n.startFrame) ||
+        (passed === 'right' && desiredEnd > n.endFrame)
+      if (isBarrier && n.endFrame > barrier) barrier = n.endFrame
+    }
+    return barrier === -Infinity ? desiredStart : Math.max(desiredStart, barrier)
+  }
+}
+
+/** Prevent the start edge being dragged into a neighbour to the left. */
+function fxCollideResizeStart(id, layer, desiredStart, endFrame) {
+  const neighbours = fxNeighbours(id, layer)
+  // Find the rightmost neighbour that ends at or before endFrame
+  let barrier = 0
+  for (const n of neighbours) {
+    if (n.endFrame <= endFrame && n.endFrame > barrier) barrier = n.endFrame
+  }
+  return Math.max(desiredStart, barrier)
+}
+
+/** Prevent the end edge being dragged into a neighbour to the right. */
+function fxCollideResizeEnd(id, layer, startFrame, desiredEnd) {
+  const neighbours = fxNeighbours(id, layer)
+  // Find the leftmost neighbour that starts at or after startFrame
+  let barrier = Infinity
+  for (const n of neighbours) {
+    if (n.startFrame >= startFrame && n.startFrame < barrier) barrier = n.startFrame
+  }
+  return Math.min(desiredEnd, barrier === Infinity ? desiredEnd : barrier)
 }
 
 function onFxMouseLeave() { fxHoverEffectId = null; fxHoverZone = null }

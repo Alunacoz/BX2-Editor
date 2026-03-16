@@ -86,7 +86,7 @@ fi
 
 # Start main server
 echo "  On your local network, open this URL on any device:"
-echo "  Home page  ->  http://$LOCAL_IP:$HTTP_PORT/editor.html"
+echo "  Home page  ->  http://$LOCAL_IP:$HTTP_PORT"
 echo ""
 echo "Press Ctrl+C to stop."
 echo ""
