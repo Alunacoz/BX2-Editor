@@ -6,7 +6,7 @@ A standalone path editor for [BounceX-Viewer](https://github.com/Alunacoz/Bounce
 
 ## Getting Started
 
-1. Run `./StartWebsite.sh` and open the link in any browser.
+1. Run `./StartEditor.sh` or `./StartEditor.bat` and open the link in any browser.
 2. Click **Load Video** (or drag a video file onto the window)
 3. Click **Open path…** to load an existing `.bx` file (optional — supports both plain `.bx` and versioned `.bx` with effects)
 4. Use the timeline and controls to place and edit markers
