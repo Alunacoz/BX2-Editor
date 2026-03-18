@@ -129,12 +129,26 @@ const state = {
   selectedEffectId: null,
   fxVisible: false,
 
+  // Path metadata (embedded in exported .bx)
+  meta: {
+    title: '',
+    path_creator: '',
+    bpm: '',
+    related_media: '',
+    video_url: '',
+  },
+
   // Custom uploaded fonts: [{name, family}]
   customFonts: [],
 }
 
 let _effectIdCounter = 0
 function newEffectId() { return 'e' + (++_effectIdCounter) }
+
+// Handle to the currently-open .bx file (FileSystemFileHandle, or null).
+// Set when the user opens a file via showOpenFilePicker; used to write back
+// immediately when metadata is saved without showing a save-as dialog.
+let _openFileHandle = null
 
 // Persistent last-used settings per effect type (saved to localStorage)
 const _lastEffectSettings = {}
@@ -324,15 +338,30 @@ function init() {
   // File buttons
   document.getElementById('btnLoadVideo').addEventListener('click', () =>
     document.getElementById('fileInputVideo').click())
-  document.getElementById('btnLoadBx').addEventListener('click', () =>
-    document.getElementById('fileInputBx').click())
+  document.getElementById('btnLoadBx').addEventListener('click', async () => {
+    if ('showOpenFilePicker' in window) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{ description: 'BounceX Path File', accept: { 'application/json': ['.bx', '.bx2', '.json'] } }],
+          multiple: false,
+        })
+        _openFileHandle = handle
+        const file = await handle.getFile()
+        importBx(file)
+      } catch (err) {
+        if (err.name !== 'AbortError') throw err
+      }
+    } else {
+      document.getElementById('fileInputBx').click()
+    }
+  })
 
 
   document.getElementById('fileInputVideo').addEventListener('change', e => {
     const f = e.target.files[0]; if (f) loadVideo(f); e.target.value = ''
   })
   document.getElementById('fileInputBx').addEventListener('change', e => {
-    const f = e.target.files[0]; if (f) importBx(f); e.target.value = ''
+    const f = e.target.files[0]; if (f) { _openFileHandle = null; importBx(f) }; e.target.value = ''
   })
   document.getElementById('btnExport').addEventListener('click', exportBx2)
   document.getElementById('btnRecord').addEventListener('click', toggleRecordMode)
@@ -467,6 +496,19 @@ function init() {
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
     saveLayout()
+  })
+
+  // Metadata modal
+  document.getElementById('btnEditMeta').addEventListener('click', openMetaModal)
+  document.getElementById('metaClose').addEventListener('click', closeMetaModal)
+  document.getElementById('metaCancel').addEventListener('click', closeMetaModal)
+  document.getElementById('metaSave').addEventListener('click', saveMetaModal)
+  document.getElementById('metaOverlay').addEventListener('mousedown', e => {
+    if (e.target === document.getElementById('metaOverlay')) closeMetaModal()
+  })
+  document.getElementById('metaModal').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeMetaModal(); e.stopPropagation() }
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); saveMetaModal() }
   })
 
   // Generate Cycle (BPM)
@@ -605,6 +647,7 @@ function init() {
     if (file.type.startsWith('video/') || /\.(mp4|webm|mkv|mov|avi)$/i.test(file.name)) {
       loadVideo(file)
     } else if (/\.(bx|bx2|json)$/i.test(file.name)) {
+      _openFileHandle = null
       importBx(file)
     }
   })
@@ -722,8 +765,10 @@ function importBx(file) {
   reader.onload = e => {
     try {
       const raw = JSON.parse(e.target.result)
-      // Support both plain .bx and .bx2 (versioned)
-      const markerData = raw.version === 2 ? raw.markers : raw
+      // Support plain .bx, version:2 at root (old), and meta.version:2.0 (new)
+      const metaVersion = raw.meta?.version
+      const isV2 = metaVersion === 2 || metaVersion === 2.0 || raw.version === 2 || raw.version === 2.0
+      const markerData = isV2 ? raw.markers : raw
       state.markers = Object.entries(markerData)
         .map(([k, v]) => ({
           frame: parseInt(k),
@@ -732,14 +777,23 @@ function importBx(file) {
           ease:   parseInt(v[2]) || 0,
         }))
         .sort((a, b) => a.frame - b.frame)
-      // Load effects from bx2
-      if (raw.version === 2 && Array.isArray(raw.effects)) {
+      // Load effects
+      if (isV2 && Array.isArray(raw.effects)) {
         state.effects = raw.effects.map(e => ({ ...e }))
         _effectIdCounter = state.effects.reduce((m, e) => {
           const n = parseInt(e.id.slice(1)) || 0; return Math.max(m, n)
         }, _effectIdCounter)
       } else {
         state.effects = []
+      }
+      // Load meta
+      const rawMeta = raw.meta || {}
+      state.meta = {
+        title:         rawMeta.title         || '',
+        path_creator:  rawMeta.path_creator  || '',
+        bpm:           rawMeta.bpm           != null ? String(rawMeta.bpm) : '',
+        related_media: rawMeta.related_media || '',
+        video_url:     rawMeta.video_url     || '',
       }
       state.selectedEffectId = null
       state.selection.clear()
@@ -767,12 +821,22 @@ async function exportBx2() {
   }
 
   const hasEffects = state.effects.length > 0
+  const hasMeta = Object.values(state.meta).some(v => v !== '')
 
-  // Always export as .bx regardless of whether effects are present.
-  // No effects → plain .bx structure (maximum compatibility with all tools).
-  // Has effects → versioned structure inside a .bx file.
-  const content = hasEffects
-    ? JSON.stringify({ version: 2, markers: markerData, effects: state.effects }, null, 2)
+  // Build meta object — always include version when we have effects or any meta
+  let metaObj = null
+  if (hasEffects || hasMeta) {
+    metaObj = { version: 2 }
+    if (state.meta.title)         metaObj.title         = state.meta.title
+    if (state.meta.path_creator)  metaObj.path_creator  = state.meta.path_creator
+    if (state.meta.bpm !== '')    metaObj.bpm            = parseFloat(state.meta.bpm) || state.meta.bpm
+    if (state.meta.related_media) metaObj.related_media = state.meta.related_media
+    if (state.meta.video_url)     metaObj.video_url     = state.meta.video_url
+  }
+
+  // No effects, no meta → plain .bx for maximum compatibility
+  const content = (hasEffects || hasMeta)
+    ? JSON.stringify({ meta: metaObj, markers: markerData, effects: state.effects }, null, 2)
     : JSON.stringify(markerData)
 
   const blob = new Blob([content], { type: 'application/json' })
@@ -2803,6 +2867,64 @@ function flashClipboardMsg(text) {
   el.style.opacity = '1'
   clearTimeout(el._timer)
   el._timer = setTimeout(() => { el.style.opacity = '0' }, 1800)
+}
+
+// ── Metadata Modal ────────────────────────────────────────────────────────────
+
+function openMetaModal() {
+  document.getElementById('metaTitle').value         = state.meta.title         || ''
+  document.getElementById('metaPathCreator').value   = state.meta.path_creator  || ''
+  document.getElementById('metaBpm').value           = state.meta.bpm           || ''
+  document.getElementById('metaRelatedMedia').value  = state.meta.related_media || ''
+  document.getElementById('metaVideoUrl').value      = state.meta.video_url     || ''
+  document.getElementById('metaOverlay').style.display = 'flex'
+  document.getElementById('metaTitle').focus()
+}
+
+function closeMetaModal() {
+  document.getElementById('metaOverlay').style.display = 'none'
+}
+
+async function saveMetaModal() {
+  state.meta.title         = document.getElementById('metaTitle').value.trim()
+  state.meta.path_creator  = document.getElementById('metaPathCreator').value.trim()
+  state.meta.bpm           = document.getElementById('metaBpm').value.trim()
+  state.meta.related_media = document.getElementById('metaRelatedMedia').value.trim()
+  state.meta.video_url     = document.getElementById('metaVideoUrl').value.trim()
+  closeMetaModal()
+
+  // If the file was opened with showOpenFilePicker we have a writable handle —
+  // write the updated content straight back without showing a save-as dialog.
+  if (_openFileHandle) {
+    try {
+      const markerData = {}
+      for (const m of state.markers) {
+        markerData[String(m.frame)] = [m.depth, m.trans, m.ease, 0]
+      }
+      const hasEffects = state.effects.length > 0
+      const hasMeta = Object.values(state.meta).some(v => v !== '')
+      const metaObj = (hasEffects || hasMeta) ? { version: 2 } : null
+      if (metaObj) {
+        if (state.meta.title)         metaObj.title         = state.meta.title
+        if (state.meta.path_creator)  metaObj.path_creator  = state.meta.path_creator
+        if (state.meta.bpm !== '')    metaObj.bpm            = parseFloat(state.meta.bpm) || state.meta.bpm
+        if (state.meta.related_media) metaObj.related_media = state.meta.related_media
+        if (state.meta.video_url)     metaObj.video_url     = state.meta.video_url
+      }
+      const content = (hasEffects || hasMeta)
+        ? JSON.stringify({ meta: metaObj, markers: markerData, effects: state.effects }, null, 2)
+        : JSON.stringify(markerData)
+      const writable = await _openFileHandle.createWritable()
+      await writable.write(content)
+      await writable.close()
+      flashClipboardMsg('Metadata saved & file updated')
+    } catch (err) {
+      flashClipboardMsg('Metadata saved (file write failed)')
+      console.error('Auto-save failed:', err)
+    }
+  } else {
+    flashClipboardMsg('Metadata saved')
+  }
 }
 
 // ── Generate Cycle (BPM marker generator) ────────────────────────────────────

@@ -1137,3 +1137,115 @@ body.dragging-over::after {
   flex: 1;
   min-width: 0;
 }
+
+/* ── Metadata Modal ──────────────────────────────────────────────── */
+.meta-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+}
+.meta-modal {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  width: 460px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+}
+.meta-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.meta-modal-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+.meta-modal-close {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.meta-modal-close:hover { background: var(--surface3); color: var(--text); }
+.meta-modal-desc {
+  font-size: 11px;
+  color: var(--text3);
+  padding: 8px 16px 4px;
+  margin: 0;
+  line-height: 1.5;
+}
+.meta-modal-desc code {
+  font-family: var(--mono);
+  background: var(--surface3);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.meta-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  padding: 12px 16px 8px;
+}
+.meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.meta-field.full-width { grid-column: 1 / -1; }
+.meta-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.meta-optional {
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  color: var(--text3);
+  opacity: 0.55;
+  text-transform: none;
+  font-family: var(--ui);
+}
+.meta-input {
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 5px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.12s;
+}
+.meta-input:focus { outline: none; border-color: var(--accent); }
+.meta-input::placeholder { color: var(--text3); opacity: 0.5; }
+.meta-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}

@@ -38,6 +38,10 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M8 2v8m-3-3 3 3 3-3"/><path d="M3 12h10"/></svg>
         <span class="export-label">Export .bx</span>
       </button>
+      <button class="btn btn-ghost" id="btnEditMeta" title="Edit path metadata">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><line x1="8" y1="10.5" x2="8" y2="11"/></svg>
+        Metadata…
+      </button>
       <div class="toolbar-sep"></div>
       <button class="btn btn-record" id="btnRecord" title="Record mode — play video and use ← ↑ → to stamp markers (R)">
         <span class="rec-dot"></span>
@@ -290,6 +294,45 @@
       <button class="btn btn-accent" id="bpmCreate">Create</button>
       <button class="btn btn-ghost" id="bpmCancel">Cancel</button>
       <span class="bpm-preview" id="bpmPreview"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Metadata Editor Modal ────────────────────────────────────────── -->
+<div class="meta-overlay" id="metaOverlay" style="display:none">
+  <div class="meta-modal" id="metaModal">
+    <div class="meta-modal-header">
+      <span class="meta-modal-title">Edit Path Metadata</span>
+      <button class="meta-modal-close" id="metaClose" title="Close">✕</button>
+    </div>
+    <p class="meta-modal-desc">Embedded in the exported <code>.bx</code> file. All fields are optional.</p>
+
+    <div class="meta-fields-grid">
+      <div class="meta-field full-width">
+        <label class="meta-label" for="metaTitle">Title <span class="meta-optional">optional</span></label>
+        <input class="meta-input" id="metaTitle" type="text" placeholder="Song or video title" autocomplete="off">
+      </div>
+      <div class="meta-field">
+        <label class="meta-label" for="metaPathCreator">Path Creator <span class="meta-optional">optional</span></label>
+        <input class="meta-input" id="metaPathCreator" type="text" placeholder="Your name or handle" autocomplete="off">
+      </div>
+      <div class="meta-field">
+        <label class="meta-label" for="metaBpm">BPM <span class="meta-optional">optional</span></label>
+        <input class="meta-input" id="metaBpm" type="number" min="1" max="999" step="0.01" placeholder="e.g. 128">
+      </div>
+      <div class="meta-field full-width">
+        <label class="meta-label" for="metaRelatedMedia">Related Media <span class="meta-optional">optional</span></label>
+        <input class="meta-input" id="metaRelatedMedia" type="text" placeholder="Song name / video filename" autocomplete="off">
+      </div>
+      <div class="meta-field full-width">
+        <label class="meta-label" for="metaVideoUrl">Video URL <span class="meta-optional">optional</span></label>
+        <input class="meta-input" id="metaVideoUrl" type="url" placeholder="https://…" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="meta-actions">
+      <button class="btn btn-accent" id="metaSave">Save</button>
+      <button class="btn btn-ghost" id="metaCancel">Cancel</button>
     </div>
   </div>
 </div>
