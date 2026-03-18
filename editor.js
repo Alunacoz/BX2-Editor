@@ -149,6 +149,7 @@ function newEffectId() { return 'e' + (++_effectIdCounter) }
 // Set when the user opens a file via showOpenFilePicker; used to write back
 // immediately when metadata is saved without showing a save-as dialog.
 let _openFileHandle = null
+let _openFileName   = null   // remembered for fallback download in Firefox
 
 // Persistent last-used settings per effect type (saved to localStorage)
 const _lastEffectSettings = {}
@@ -290,10 +291,11 @@ let fxCanvas, fxCtx
 const tlMouse = {
   down: false,
   draggingPlayhead: false,
-  draggingMarkerIdx: -1,   // index of marker being dragged (-1 = none)
-  dragStartX: 0,           // mousedown x for threshold
-  dragStartFrame: 0,       // original frame before drag started
-  dragMoved: false,        // true once drag threshold exceeded
+  draggingMarkerIdx: -1,
+  dragStartX: 0,
+  dragStartFrame: 0,
+  dragMoved: false,
+  origFrames: new Map(),  // index → original frame for all selected markers
 }
 
 // Effects timeline drag state
@@ -347,6 +349,7 @@ function init() {
         })
         _openFileHandle = handle
         const file = await handle.getFile()
+        _openFileName = file.name
         importBx(file)
       } catch (err) {
         if (err.name !== 'AbortError') throw err
@@ -500,6 +503,7 @@ function init() {
 
   // Metadata modal
   document.getElementById('btnEditMeta').addEventListener('click', openMetaModal)
+  document.getElementById('btnClean').addEventListener('click', cleanMarkers)
   document.getElementById('metaClose').addEventListener('click', closeMetaModal)
   document.getElementById('metaCancel').addEventListener('click', closeMetaModal)
   document.getElementById('metaSave').addEventListener('click', saveMetaModal)
@@ -820,24 +824,16 @@ async function exportBx2() {
     markerData[String(m.frame)] = [m.depth, m.trans, m.ease, 0]
   }
 
-  const hasEffects = state.effects.length > 0
-  const hasMeta = Object.values(state.meta).some(v => v !== '')
+  // Always export as version 2 with meta block and marker_fields.
+  // effects is always present (empty array when none).
+  const metaObj = { version: 2, marker_fields: ['depth', 'trans', 'ease', 'auxiliary'] }
+  if (state.meta.title)         metaObj.title         = state.meta.title
+  if (state.meta.path_creator)  metaObj.path_creator  = state.meta.path_creator
+  if (state.meta.bpm !== '')    metaObj.bpm            = parseFloat(state.meta.bpm) || state.meta.bpm
+  if (state.meta.related_media) metaObj.related_media = state.meta.related_media
+  if (state.meta.video_url)     metaObj.video_url     = state.meta.video_url
 
-  // Build meta object — always include version when we have effects or any meta
-  let metaObj = null
-  if (hasEffects || hasMeta) {
-    metaObj = { version: 2 }
-    if (state.meta.title)         metaObj.title         = state.meta.title
-    if (state.meta.path_creator)  metaObj.path_creator  = state.meta.path_creator
-    if (state.meta.bpm !== '')    metaObj.bpm            = parseFloat(state.meta.bpm) || state.meta.bpm
-    if (state.meta.related_media) metaObj.related_media = state.meta.related_media
-    if (state.meta.video_url)     metaObj.video_url     = state.meta.video_url
-  }
-
-  // No effects, no meta → plain .bx for maximum compatibility
-  const content = (hasEffects || hasMeta)
-    ? JSON.stringify({ meta: metaObj, markers: markerData, effects: state.effects }, null, 2)
-    : JSON.stringify(markerData)
+  const content = JSON.stringify({ meta: metaObj, markers: markerData, effects: state.effects }, null, 2)
 
   const blob = new Blob([content], { type: 'application/json' })
 
@@ -1212,14 +1208,29 @@ function onTlMouseDown(e) {
   const clickedFrame = Math.max(0, Math.min(state.totalFrames - 1, tlXToFrame(x)))
 
   if (hitMarker >= 0) {
-    const mode = e.shiftKey ? 'range' : (e.ctrlKey || e.metaKey) ? 'toggle' : 'single'
-    selectMarker(hitMarker, mode)
-    // Prime for potential drag — only on single select without modifiers.
-    // Seek is deferred to onTlMouseUp so dragging never moves the playhead.
-    if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    const alreadyInSelection = state.selection.has(hitMarker)
+    const hasModifier = e.shiftKey || e.ctrlKey || e.metaKey
+
+    if (hasModifier) {
+      // Modifier held — normal range/toggle behaviour
+      const mode = e.shiftKey ? 'range' : 'toggle'
+      selectMarker(hitMarker, mode)
+    } else if (!alreadyInSelection) {
+      // Clicking a marker not in the current selection → single-select it
+      selectMarker(hitMarker, 'single')
+    }
+    // If clicking a marker already in the selection with no modifier,
+    // preserve the full selection so the whole group can be dragged.
+
+    // Prime drag for no-modifier clicks (single or group)
+    if (!hasModifier) {
       tlMouse.draggingMarkerIdx = hitMarker
       tlMouse.dragStartX        = x
       tlMouse.dragStartFrame    = state.markers[hitMarker].frame
+      tlMouse.origFrames        = new Map()
+      for (const si of state.selection) {
+        if (state.markers[si]) tlMouse.origFrames.set(si, state.markers[si].frame)
+      }
       document.body.style.userSelect = 'none'
     }
   } else {
@@ -1236,14 +1247,9 @@ function onTlMouseMove(e) {
 
   // ── Marker drag ────────────────────────────────────────────────────────────
   if (tlMouse.draggingMarkerIdx >= 0 && tlMouse.down) {
-    const DRAG_THRESHOLD = 4   // px before drag activates
-    const idx = tlMouse.draggingMarkerIdx
-    const m = state.markers[idx]
-    if (!m) { tlMouse.draggingMarkerIdx = -1; return }
-
+    const DRAG_THRESHOLD = 4
     if (!tlMouse.dragMoved && Math.abs(x - tlMouse.dragStartX) < DRAG_THRESHOLD) return
     if (!tlMouse.dragMoved) {
-      // First move past threshold — push history once
       pushHistory()
       tlMouse.dragMoved = true
     }
@@ -1251,25 +1257,60 @@ function onTlMouseMove(e) {
     timelineCanvas.style.cursor = 'grabbing'
     document.body.style.cursor  = 'grabbing'
 
-    let newFrame = Math.max(0, Math.min(state.totalFrames - 1, tlXToFrame(x)))
+    // Frame delta from the drag-anchor marker's original position
+    const rawTarget = Math.max(0, Math.min(state.totalFrames - 1, tlXToFrame(x)))
+    // Snap anchor to playhead only when dragging a single marker
+    const snapped = state.hasVideo && tlMouse.origFrames.size === 1
+      && Math.abs(x - frameToTlX(currentFrame())) <= 10
+      ? currentFrame() : rawTarget
+    let delta = snapped - tlMouse.dragStartFrame
 
-    // Snap to playhead if within 10px
-    if (state.hasVideo) {
-      const playheadX = frameToTlX(currentFrame())
-      if (Math.abs(x - playheadX) <= 10) newFrame = currentFrame()
+    // Clamp delta so no selected marker goes out of bounds
+    for (const [si, origF] of tlMouse.origFrames) {
+      const proposed = origF + delta
+      if (proposed < 0) delta = Math.max(delta, -origF)
+      if (proposed >= state.totalFrames) delta = Math.min(delta, state.totalFrames - 1 - origF)
     }
 
-    // Don't land on a frame already occupied by another marker
-    if (state.markers.some((mk, i) => i !== idx && mk.frame === newFrame)) return
+    if (delta === 0) return
 
-    m.frame = newFrame
+    // Check for collisions with non-selected markers
+    const selectedSet = new Set(tlMouse.origFrames.keys())
+    const proposedFrames = new Set()
+    for (const [, origF] of tlMouse.origFrames) proposedFrames.add(origF + delta)
+    const wouldCollide = state.markers.some((mk, i) =>
+      !selectedSet.has(i) && proposedFrames.has(mk.frame)
+    )
+    if (wouldCollide) return
+
+    // Apply delta to all selected markers
+    for (const [si, origF] of tlMouse.origFrames) {
+      if (state.markers[si]) state.markers[si].frame = origF + delta
+    }
+
     sortMarkers()
-    // Re-find and re-select after sort
-    const newIdx = state.markers.findIndex(mk => mk.frame === newFrame)
-    tlMouse.draggingMarkerIdx = newIdx
-    state.selection.clear()
-    state.selection.add(newIdx)
-    state.lastClickedIdx = newIdx
+
+    // Re-map selection and origFrames indices after sort
+    const newSelection = new Set()
+    const newOrigFrames = new Map()
+    const anchorNewFrame = tlMouse.dragStartFrame + delta
+    let newAnchorIdx = -1
+    for (const [, origF] of tlMouse.origFrames) {
+      const newF = origF + delta
+      const newIdx = state.markers.findIndex(mk => mk.frame === newF)
+      if (newIdx >= 0) {
+        newSelection.add(newIdx)
+        newOrigFrames.set(newIdx, origF)
+        if (origF === tlMouse.dragStartFrame) newAnchorIdx = newIdx
+      }
+    }
+    state.selection = newSelection
+    tlMouse.origFrames = newOrigFrames
+    if (newAnchorIdx >= 0) {
+      tlMouse.draggingMarkerIdx = newAnchorIdx
+      state.lastClickedIdx = newAnchorIdx
+    }
+
     rebuildPath()
     renderMarkerList()
     renderMarkerProps()
@@ -2901,19 +2942,13 @@ async function saveMetaModal() {
       for (const m of state.markers) {
         markerData[String(m.frame)] = [m.depth, m.trans, m.ease, 0]
       }
-      const hasEffects = state.effects.length > 0
-      const hasMeta = Object.values(state.meta).some(v => v !== '')
-      const metaObj = (hasEffects || hasMeta) ? { version: 2 } : null
-      if (metaObj) {
-        if (state.meta.title)         metaObj.title         = state.meta.title
-        if (state.meta.path_creator)  metaObj.path_creator  = state.meta.path_creator
-        if (state.meta.bpm !== '')    metaObj.bpm            = parseFloat(state.meta.bpm) || state.meta.bpm
-        if (state.meta.related_media) metaObj.related_media = state.meta.related_media
-        if (state.meta.video_url)     metaObj.video_url     = state.meta.video_url
-      }
-      const content = (hasEffects || hasMeta)
-        ? JSON.stringify({ meta: metaObj, markers: markerData, effects: state.effects }, null, 2)
-        : JSON.stringify(markerData)
+      const metaObj = { version: 2, marker_fields: ['depth', 'trans', 'ease', 'auxiliary'] }
+      if (state.meta.title)         metaObj.title         = state.meta.title
+      if (state.meta.path_creator)  metaObj.path_creator  = state.meta.path_creator
+      if (state.meta.bpm !== '')    metaObj.bpm            = parseFloat(state.meta.bpm) || state.meta.bpm
+      if (state.meta.related_media) metaObj.related_media = state.meta.related_media
+      if (state.meta.video_url)     metaObj.video_url     = state.meta.video_url
+      const content = JSON.stringify({ meta: metaObj, markers: markerData, effects: state.effects }, null, 2)
       const writable = await _openFileHandle.createWritable()
       await writable.write(content)
       await writable.close()
@@ -2927,7 +2962,52 @@ async function saveMetaModal() {
   }
 }
 
-// ── Generate Cycle (BPM marker generator) ────────────────────────────────────
+// ── Clean markers ─────────────────────────────────────────────────────────────
+//
+// Remove redundant middle markers from runs of 3+ consecutive markers with
+// the same depth. E.g. [0.5, 0.5, 0.5] → delete the middle one;
+// [0.5, 0.5, 0.5, 0.5] → delete the two middle ones.
+// The first and last of each run are kept to preserve the shape of the path.
+
+function cleanMarkers() {
+  if (state.markers.length < 3) {
+    flashClipboardMsg('Nothing to clean')
+    return
+  }
+
+  // markers are always sorted by frame; find indices to remove
+  const toRemove = new Set()
+  let i = 0
+  while (i < state.markers.length) {
+    const depth = state.markers[i].depth
+    // Find the end of the run at this depth
+    let j = i + 1
+    while (j < state.markers.length && state.markers[j].depth === depth) j++
+    const runLength = j - i
+    // If 3 or more in a row, mark all interior ones for removal
+    if (runLength >= 3) {
+      for (let k = i + 1; k < j - 1; k++) toRemove.add(k)
+    }
+    i = j
+  }
+
+  if (toRemove.size === 0) {
+    flashClipboardMsg('No redundant markers found')
+    return
+  }
+
+  pushHistory()
+  state.markers = state.markers.filter((_, idx) => !toRemove.has(idx))
+  state.selection.clear()
+  state.lastClickedIdx = null
+  rebuildPath()
+  renderMarkerList()
+  renderMarkerProps()
+  updateMarkerCount()
+  flashClipboardMsg(`Cleaned ${toRemove.size} redundant marker${toRemove.size > 1 ? 's' : ''}`)
+}
+
+// ── BPM Cycle Generator ───────────────────────────────────────────────────────
 //
 // Places depth-0 markers from the playhead to the end of the video at the
 // given BPM. Because BPM is often not evenly divisible into whole frames, a
